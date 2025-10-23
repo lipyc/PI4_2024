@@ -1,0 +1,28 @@
+{
+  "name": "api-para-a-aplica-o-viriatosscouting",
+  "version": "1.0",
+  "description": "Este documento apresenta toda a documentação de uma API que permite gerir um sistema que faz gestão de uma equipa de scouting. A API inclui funcionalidades que permitem o utilizador gerir jogadores, clubes, escalões, equipas e utilizadores. A mesma tambem apresenta um local para criar tarefas e relatórios.",
+  "main": "index.js",
+  "scripts": {
+    "prestart": "npm install",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "swagger"
+  ],
+  "license": "Unlicense",
+  "private": true,
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "connect": "^3.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "js-yaml": "^3.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "oas3-tools": "^2.2.3",
+    "pg": "^8.13.1",
+    "sequelize": "^6.37.5"
+  }
+}

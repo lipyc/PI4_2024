@@ -1,0 +1,3978 @@
+openapi: 3.0.0
+info:
+  title: API para a aplicação ViriatosScouting
+  description:
+    "Este documento apresenta toda a documentação de uma API que permite\
+    \ gerir um sistema que faz gestão de uma equipa de scouting. A API inclui funcionalidades\
+    \ que permitem o utilizador gerir jogadores, clubes, escalões, equipas e utilizadores.\
+    \ A mesma tambem apresenta um local para criar tarefas e relatórios."
+  version: "1.0"
+servers:
+  - url: https://localhost:8080
+    description: Servidor local utilizado para testar a API
+  - url: https://backendpi4-bbzf.onrender.com
+    description: Servidor online utilizado para testar a API
+tags:
+  - name: Atletas
+    description: Parte da API reservada para gestão e listagem de atletas
+  - name: Clubes
+    description: Parte da API reservada para gestão e listagem de clubes
+  - name: Tarefas
+    description: Parte da API reservada para gestão e listagem de tarefas
+  - name: Relatórios
+    description: Parte da API reservada para gestão e listagem de relatórios
+  - name: Escalões
+    description: Parte da API reservada para gestão e listagem de escalões
+  - name: Equipas
+    description: Parte da API reservada para gestão e listagem de equipas
+  - name: Utilizadores
+    description: Parte da API reservada para gestão e listagem de utilizadores
+  - name: Uploads
+    description: Parte da API reservada para upload de imagens
+  - name: Autenticação
+    description: Parte da API reservada para autenticação de utilizadores
+  - name: Recuperar Password
+    description: Parte da API reservada para recuperar ou alterar password de utilizadores
+paths:
+  /atletas:
+    get:
+      tags:
+        - Atletas
+      summary: Lista todos os atletas
+      description:
+        "Retorna uma lista de todos os atletas, mas somente administradores\
+        \ e outro podem ver esta informação. Para obter os atletas, o utilizador deve\
+        \ estar autenticado com um token válido. O mesmo tambem já faz a filtragem\
+        \ por ano de nascimento, nacionalidade, posição, avaliação final, clube e\
+        \ escalão."
+      operationId: listaAtletas
+      parameters:
+        - name: anoNascimento
+          in: query
+          description: Ano de nascimento para filtrar os atletas.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 2100
+            minimum: 1900
+            type: integer
+            format: int32
+            example: 1985
+        - name: nacionalidade
+          in: query
+          description: Nacionalidade para filtrar os atletas.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maxLength: 512
+            pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+            type: string
+            example: Português
+        - name: posicao
+          in: query
+          description: Posição para filtrar os atletas.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 99
+            minimum: 1
+            type: integer
+            format: int32
+            example: 4
+        - name: avaliacaofinal
+          in: query
+          description: Avaliação final para filtrar os atletas.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 5
+            minimum: 1
+            type: integer
+            format: int32
+            example: 5
+        - name: clube_id
+          in: query
+          description: ID do clube para filtrar os atletas.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 1
+        - name: escalao_id
+          in: query
+          description: ID do escalão para filtrar os atletas.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 2
+        - name: limit
+          in: query
+          description: Número máximo de atletas a serem retornadas por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de atletas a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 1
+            default: 0
+        - name: nome
+          in: query
+          description: Nome do atleta a ir buscar.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 30
+            minimum: 0
+            type: string
+            example: "Cristiano Ronaldo"
+      responses:
+        "200":
+          description: Lista de atletas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarAtleta200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma atleta encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorAtleta"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Atletas
+    post:
+      tags:
+        - Atletas
+      summary: Cria um novo atleta
+      description:
+        Permite criar um novo atleta. Apenas administradores e olheiros
+        podem criar atletas. O utilizador deve fornecer os dados do atleta no body.
+      operationId: criarAtleta
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtletaCriar"
+        required: true
+      responses:
+        "201":
+          description: Atleta criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AtletaCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Atletas
+  /atletas/{id}:
+    get:
+      tags:
+        - Atletas
+      summary: Lista um atleta
+      description: "Retorna uma lista de um atleta, mas somente administradores\
+        \ e outro podem ver esta informação. Para obter os atletas, o utilizador deve\
+        \ estar autenticado com um token válido. O mesmo tambem já faz a filtragem\
+        \ por ano de nascimento, nacionalidade, posição, avaliação final, clube e\
+        \ escalão."
+      operationId: listaUmAtleta
+      parameters:
+        - name: id
+          in: path
+          description: ID do atleta a mostrar
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "200":
+          description: Lista de atletas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmAtleta200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma atleta encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorAtleta"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Atletas
+    put:
+      tags:
+        - Atletas
+      summary: Edita um atleta
+      description:
+        Permite editar um atleta existente. O utilizador pode editar atletas
+        se o mesmo for administrador. É necessário um token válido para autenticação.
+      operationId: editarAtleta
+      parameters:
+        - name: id
+          in: path
+          description: ID do atleta a ser atualizado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtletaEditar"
+        required: true
+      responses:
+        "200":
+          description: Atleta atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AtletaEditar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Atletas
+    delete:
+      tags:
+        - Atletas
+      summary: Apaga um atleta
+      description:
+        Permite apagar um atleta existente. Apenas o administrador pode
+        apagá-lo. O utilizador deve fornecer o ID do atleta a ser apagado.
+      operationId: apagarAtleta
+      parameters:
+        - name: id
+          in: path
+          description: ID do atleta a ser apagado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Atleta apagado com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum atleta encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorAtleta"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Atletas
+  /atletas/todos:
+    get:
+      tags:
+        - Atletas
+      summary: Lista todos os atletas
+      description:
+          "Retorna uma lista de todos os atletas, mas somente administradores\
+          \ e outro podem ver esta informação. Para obter os atletas, o utilizador deve\
+          \ estar autenticado com um token válido. O mesmo tambem já faz a filtragem\
+          \ por ano de nascimento, nacionalidade, posição, avaliação final, clube e\
+          \ escalão."
+      operationId: listartodosatletas
+      responses:
+        "200":
+          description: Lista de atletas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarAtleta200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma atleta encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorAtleta"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Atletas
+  /clubes:
+    get:
+      tags:
+        - Clubes
+      summary: Lista todos os clubes
+      description:
+        "Retorna uma lista de todos os clubes, mas somente administradores\
+        \ podem visualizar esta informação. Para obter os clubes, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaClubes
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de clubes a serem retornadas por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de clubes a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 1
+            default: 0
+        - name: nome
+          in: query
+          description: Nome do clube a ir buscar.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 30
+            minimum: 0
+            type: string
+            example: "Rocas do Vouga"
+      responses:
+        "200":
+          description: Lista de clubes com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarClubes200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma clube encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorClube"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Clubes
+    post:
+      tags:
+        - Clubes
+      summary: Cria um novo clube
+      description:
+        Permite criar um novo clube. Apenas administradores podem criar
+        clubes. O utilizador deve fornecer os dados do clube no body.
+      operationId: criarClube
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClubeCriar"
+        required: true
+      responses:
+        "201":
+          description: Clube criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClubeCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "409":
+          description: Conflito - Se o nome da equipa já estiverem
+            em uso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Clubes
+  /clubes/{id}:
+    put:
+      tags:
+        - Clubes
+      summary: Edita um clube
+      description:
+        Permite editar um clube existente. O utilizador pode editar clubes
+        se o mesmo for administrador. É necessário um token válido para autenticação.
+      operationId: editarClube
+      parameters:
+        - name: id
+          in: path
+          description: ID do clube a ser atualizado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClubeCriar"
+        required: true
+      responses:
+        "200":
+          description: Clube atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClubeCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma clube encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorClube"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Clubes
+    delete:
+      tags:
+        - Clubes
+      summary: Apaga um clube
+      description:
+        Permite apagar um clube existente. Apenas o administrador pode
+        apagá-lo. O utilizador deve fornecer o ID do clube a ser apagado.
+      operationId: apagarClube
+      parameters:
+        - name: id
+          in: path
+          description: ID do clube a ser apagado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Clube apagado com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum clube encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorClube"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Clubes
+  /tarefas:
+    get:
+      tags:
+        - Tarefas
+      summary: Lista todos os tarefas
+      description:
+        "Retorna uma lista de todas as tarefas, mas somente utilizadores\
+        \ autenticados (administradores e olheiros) podem visualizar esta informaç\
+        ão. Para obter as tarefas, o utilizador deve estar autenticado com um token\
+        \ válido."
+      operationId: listaTarefas
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de tarefas a serem retornadas por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de tarefas a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 1
+            default: 0
+        - name: idUtilizador
+          in: query
+          description: Filtra as tarefas pelo identificador único do utilizador.
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            format: int64
+            example: 3
+        - name: idAtleta
+          in: query
+          description: Filtra as tarefas pelo identificador único do atleta.
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            format: int64
+            example: 3
+      responses:
+        "200":
+          description: Lista de tarefas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarTarefa200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma tarefa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorTarefa"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+    post:
+      tags:
+        - Tarefas
+      summary: Cria uma nova tarefa
+      description:
+        Permite criar uma nova tarefa. Apenas administradores podem criar
+        tarefas. O utilizador deve fornecer os dados da tarefa no body.
+      operationId: criarTarefa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TarefaCriar"
+        required: true
+      responses:
+        "201":
+          description: Tarefa criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TarefaCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+  /tarefas/{id}:
+    get:
+      tags:
+        - Tarefas
+      summary: Lista uma tarefa
+      description: "Retorna uma lista de uma tarefa, mas somente utilizadores\
+        \ autenticados (administradores e olheiros) podem visualizar esta informaç\
+        ão. Para obter as tarefas, o utilizador deve estar autenticado com um token\
+        \ válido."
+      operationId: listaUmaTarefa
+      parameters:
+        - name: id
+          in: path
+          description: ID da tarefa a ser atualizada
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "200":
+          description: Lista de tarefas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmaTarefa200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma tarefa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorTarefa"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+    put:
+      tags:
+        - Tarefas
+      summary: Edita um tarefa
+      description:
+        Permite editar um tarefa existente. O utilizador pode editar tarefas
+        se o mesmo for administrador. É necessário um token válido para autenticação.
+      operationId: editarTarefa
+      parameters:
+        - name: id
+          in: path
+          description: ID da tarefa a ser atualizada
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TarefaCriar"
+        required: true
+      responses:
+        "200":
+          description: Tarefa atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TarefaCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+    delete:
+      tags:
+        - Tarefas
+      summary: Apaga um tarefa
+      description:
+        Permite apagar um tarefa existente. Apenas o administrador pode
+        apagá-la. O utilizador deve fornecer o ID do tarefa a ser apagada.
+      operationId: apagarTarefa
+      parameters:
+        - name: id
+          in: path
+          description: ID do tarefa a ser apagada
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Tarefa apagado com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum tarefa encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorTarefa"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+  /tarefas/proxima:
+    get:
+      tags:
+        - Tarefas
+      summary: Lista proxima tarefa de um utilizador
+      description:
+        "Retorna a proxima tarefa de um utilizador, mas somente utilizadores\
+        \ autenticados (olheiros) podem visualizar esta informaç\
+        ão. Para obter as tarefas, o utilizador deve estar autenticado com um token\
+        \ válido."
+      operationId: listaProximaTarefa
+      responses:
+        "200":
+          description: Lista de tarefas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmaTarefa200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma tarefa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorTarefa"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+  /tarefas/proximas:
+    get:
+      tags:
+        - Tarefas
+      summary: Lista proximas tarefas de um utilizador
+      description:
+        "Retorna a proxima tarefa de um utilizador, mas somente utilizadores\
+        \ autenticados (olheiros) podem visualizar esta informaç\
+        ão. Para obter as tarefas, o utilizador deve estar autenticado com um token\
+        \ válido."
+      operationId: listaProximasTarefas
+      responses:
+        "200":
+          description: Lista de tarefas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmaTarefa200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma tarefa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorTarefa"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Tarefas
+  /relatorios:
+    get:
+      tags:
+        - Relatórios
+      summary: Lista todos os relatórios
+      description:
+        "Retorna uma lista de todos os relatórios, mas somente administradores\
+        \ e outros podem aceder a esta informação. Para obter os relatórios, o utilizador\
+        \ deve estar autenticado com um token válido. O mesmo apresenta tambem já\
+        \ faz a filtragem por data, nota final ou atleta."
+      operationId: listaRelatorios
+      parameters:
+        - name: data
+          in: query
+          description:
+            "Data exata em que o relatório foi feito, para filtrar os relató\
+            rios."
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+            format: date
+        - name: avaliacaoFinal
+          in: query
+          description: Nota final específica para filtrar os relatórios.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 5
+            minimum: 1
+            type: integer
+            format: int32
+            example: 4
+        - name: idAtleta
+          in: query
+          description:
+            ID único do atleta para filtrar os relatórios relacionados a
+            ele.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 101
+        - name: limit
+          in: query
+          description: Número máximo de relatórios a serem retornados por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 100
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de relatórios a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 0
+            default: 0
+      responses:
+        "200":
+          description: Lista de relatórios com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarRelatorios200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum relatório encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorRelatorio"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Relatorios
+    post:
+      tags:
+        - Relatórios
+      summary: Cria um novo relatório
+      description:
+        Permite criar um novo relatório. Apenas administradores e olheiros
+        podem criar relatórios. O utilizador deve fornecer os dados do relatório no
+        body.
+      operationId: criarRelatorio
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelatorioCriar"
+        required: true
+      responses:
+        "201":
+          description: Relatório criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelatorioCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Relatorios
+  /relatorios/{id}:
+    delete:
+      tags:
+        - Relatórios
+      summary: Apaga um relatório
+      description:
+        Permite apagar um relatório existente. Apenas o administrador pode
+        apagá-lo. O utilizador deve fornecer o ID do relatório a ser apagado.
+      operationId: apagarRelatorio
+      parameters:
+        - name: id
+          in: path
+          description: ID do relatório a ser apagado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Relatório apagado com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum relatório encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorRelatorio"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Relatorios
+  /relatorios/atleta/{idAtleta}:
+    get:
+      tags:
+      - Relatórios
+      summary: Lista todos os relatórios de um atleta
+      description:
+        Retorna uma lista de relatórios de um atleta específico, baseado no ID do atleta.
+        O utilizador deve estar autenticado com um token válido.
+      operationId: listaRelatoriosPorAtleta
+      parameters:
+      - name: idAtleta
+        in: path
+        description: ID único do atleta para filtrar os relatórios relacionados a ele.
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 4
+      responses:
+        "200":
+          description: Lista de relatórios encontrados para o atleta
+          content:
+            application/json:
+              schema:
+          $ref: "#/components/schemas/ListarRelatorios200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+          $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+          $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum relatório encontrado para o atleta
+          content:
+            application/json:
+              schema:
+          $ref: "#/components/schemas/NotFoundErrorRelatorio"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+          $ref: "#/components/schemas/UnexpectedError"
+      security:
+      - bearerAuth: []
+      x-swagger-router-controller: Relatorios
+  /escaloes:
+    get:
+      tags:
+        - Escalões
+      summary: Lista todos os escalões
+      description:
+        "Retorna uma lista de todos os escalões, mas somente administradores\
+        \ e outros podem ter acesso a esta informação. Para obter os escalões, o utilizador\
+        \ deve estar autenticado com um token válido."
+      operationId: listaEscaloes
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de escalões a serem retornadas por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de escalões a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 1
+            default: 0
+        - name: nome
+          in: query
+          description: Nome do escalão a ir buscar.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 30
+            minimum: 0
+            type: string
+            example: "Juniores"
+      responses:
+        "200":
+          description: Lista de escalões com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarEscalao200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum escalão encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEscalao"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Escaloes
+    post:
+      tags:
+        - Escalões
+      summary: Cria um novo escalão
+      description:
+        Permite criar um novo escalão. Apenas administradores podem criar
+        escalões. O utilizador deve fornecer os dados do escalão no body.
+      operationId: criarEscalao
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EscalaoCriar"
+        required: true
+      responses:
+        "201":
+          description: Escalão criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalaoCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Escaloes
+  /escaloes/{id}:
+    put:
+      tags:
+        - Escalões
+      summary: Edita um escalão
+      description:
+        Permite editar um escalão existente. O utilizador pode editar escalões
+        se o mesmo for administrador. É necessário um token válido para autenticação.
+      operationId: editarEscalao
+      parameters:
+        - name: id
+          in: path
+          description: ID do escalão a ser atualizado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EscalaoCriar"
+        required: true
+      responses:
+        "200":
+          description: Escalão atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscalaoCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma escalão encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEscalao"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Escaloes
+    delete:
+      tags:
+        - Escalões
+      summary: Apaga um escalão
+      description:
+        Permite apagar um escalão existente. Apenas o administrador pode
+        apagá-lo. O utilizador deve fornecer o ID do escalão a ser apagado.
+      operationId: apagarEscalao
+      parameters:
+        - name: id
+          in: path
+          description: ID do escalão a ser apagado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Escalão apagado com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum escalão encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEscalao"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Escaloes
+  /equipas:
+    get:
+      tags:
+        - Equipas
+      summary: Lista todas as equipas
+      description:
+        "Retorna uma lista de todas as equipas, mas somente administradores\
+        \ podem visualizar esta informação. Para obter as equipas, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaEquipas
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de escalões a serem retornadas por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de escalões a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 1
+            default: 0
+      responses:
+        "200":
+          description: Lista de equipas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarEquipa200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "403":
+          description:
+            Acesso proibido - O utilizador não tem permissões suficientes
+            para criar o tarefa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+        "404":
+          description: Nenhuma equipa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEquipas"
+        "406":
+          description:
+            Formato não aceitável - O formato solicitado não é suportado
+            pelo servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotAcceptableError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        default:
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Equipas
+    post:
+      tags:
+        - Equipas
+      summary: Cria uma nova equipa
+      description:
+        Permite criar uma nova equipa. Apenas administradores podem criar
+        equipas. O utilizador deve fornecer os dados do tarefa no body.
+      operationId: criarEquipa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipaCriar"
+        required: true
+      responses:
+        "201":
+          description: Equipa criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipaCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Equipas
+  /equipas/{id}:
+    get:
+      tags:
+        - Equipas
+      summary: Lista uma equipa
+      description:
+        "Retorna uma lista de uma equipa, mas somente administradores\
+        \ podem visualizar esta informação. Para obter as equipas, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaUmaEquipa
+      parameters:
+        - name: id
+          in: path
+          description: ID da equipa a ser atualizada
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "200":
+          description: Lista de equipas com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmaEquipa200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "403":
+          description:
+            Acesso proibido - O utilizador não tem permissões suficientes
+            para criar o tarefa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForbiddenError"
+        "404":
+          description: Nenhuma equipa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEquipas"
+        "406":
+          description:
+            Formato não aceitável - O formato solicitado não é suportado
+            pelo servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotAcceptableError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        default:
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Equipas
+    put:
+      tags:
+        - Equipas
+      summary: Edita um equipa
+      description:
+        Permite editar uma equipa existente. O utilizador pode editar equipas
+        se o mesmo for administrador. É necessário um token válido para autenticação.
+      operationId: editarEquipa
+      parameters:
+        - name: id
+          in: path
+          description: ID da equipa a ser atualizada
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipaCriar"
+        required: true
+      responses:
+        "200":
+          description: Equipa atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipaCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma equipa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEquipas"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Equipas
+    delete:
+      tags:
+        - Equipas
+      summary: Apaga uma equipa
+      description:
+        Permite apagar uma equipa existente. Apenas o administrador pode
+        apagá-la. O utilizador deve fornecer o ID da equipa a ser apagada.
+      operationId: apagarEquipa
+      parameters:
+        - name: id
+          in: path
+          description: ID da equipa a ser apagada
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Equipa apagada com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhuma equipa encontrada para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorEquipas"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Equipas
+  /utilizadores:
+    get:
+      tags:
+        - Utilizadores
+      summary: Lista todos os utilizadores
+      description:
+        "Retorna uma lista de todos os utilizadores, mas somente administradores\
+        \ podem visualizar esta informação. Para obter os tarefas, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaUtilizadores
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de utilizadores a serem retornadas por página.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 999999
+            minimum: 1
+            type: integer
+            format: int64
+            example: 10
+            default: 10
+        - name: offset
+          in: query
+          description: Número de utilizadores a ignorar para paginação.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 300
+            minimum: 0
+            type: integer
+            format: int64
+            example: 1
+            default: 0
+        - name: nome
+          in: query
+          description: Nome do utilizado a ir buscar.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 30
+            minimum: 0
+            type: string
+            example: "João Silva"
+        - name: tipoUtilizador
+          in: query
+          description: Tipo de utilizador a ir buscar.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 4
+            minimum: 1
+            type: integer
+            format: int64
+            example: 2
+      responses:
+        "200":
+          description: Lista de utilizadores com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUtilizador200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+  /utilizadores/{id}:
+    get:
+      tags:
+        - Utilizadores
+      summary: Lista todos os utilizadores
+      description:
+        "Retorna uma lista de todos os utilizadores, mas somente administradores\
+        \ podem visualizar esta informação. Para obter os tarefas, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaUmUtilizador
+      parameters:
+        - name: id
+          in: path
+          description: ID do utilizador a ser atualizado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "200":
+          description: Lista de utilizadores com metadados de paginação
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmUtilizador200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+    put:
+      tags:
+        - Utilizadores
+      summary: Edita um utilizador
+      description:
+        "Permite editar um utilizador existente. O utilizador pode editar\
+        \ utilizador se o mesmo for administrador, ou o proprio utilizador. É necessá\
+        rio um token válido para autenticação."
+      operationId: editarUtilizador
+      parameters:
+        - name: id
+          in: path
+          description: ID do utilizador a ser atualizado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UtilizadorCriar"
+        required: true
+      responses:
+        "200":
+          description: Utilizador atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UtilizadorCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+    delete:
+      tags:
+        - Utilizadores
+      summary: Apaga um utilizador
+      description:
+        Permite apagar um utilizador existente. Apenas o administrador
+        pode apagá-lo. O utilizador deve fornecer o ID do utilizador a ser apagado.
+      operationId: apagarUtilizador
+      parameters:
+        - name: id
+          in: path
+          description: ID do utilizador a ser apagado
+          required: true
+          style: simple
+          explode: false
+          schema:
+            maxLength: 100
+            pattern: "^[0-9]+$"
+            type: string
+      responses:
+        "204":
+          description: Utilizador apagado com sucesso
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+  /utilizadores/listarme:
+    get:
+      tags:
+        - Utilizadores
+      summary: Lista o utilizador logado
+      description: "Retorna uma lista do utilizador logado.\
+        \ Para obter a informação, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaUmUtilizadorLogado
+      responses:
+        "200":
+          description: Lista do utilizador
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUmUtilizador200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+  /utilizadores/editarme:
+    put:
+      tags:
+        - Utilizadores
+      summary: Edita utilizador logado
+      description: "Permite editar um utilizador logado. \
+        \  É necessário um token válido para autenticação."
+      operationId: editarUtilizadorLogado
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UtilizadorEditarLogado"
+        required: true
+      responses:
+        "200":
+          description: Utilizador atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UtilizadorCriar"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+  /utilizadores/olh:
+    get:
+      tags:
+        - Utilizadores
+      summary: Lista olheiros
+      description: "Retorna uma lista de olheiros.\
+        \ Para obter a informação, o utilizador deve\
+        \ estar autenticado com um token válido."
+      operationId: listaOlheiros
+      responses:
+        "200":
+          description: Lista de olheiros
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListarUtilizador200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Nenhum utilizador encontrado para os filtros aplicados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundErrorUtilizador"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Utilizadores
+  /uploads:
+    post:
+      tags:
+        - Uploads
+      summary: Realiza o upload de um arquivo para o servidor.
+      operationId: upload
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                icon:
+                  type: string
+                  format: binary
+                  description: O arquivo a ser enviado para o servidor.
+      responses:
+        "200":
+          description: Arquivo enviado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/upload_200"
+        "400":
+          description: Dados inválidos - Erro no formato do arquivo ou campos obrigatórios ausentes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "413":
+          description: Arquivo muito grande - O arquivo enviado excede o tamanho máximo permitido.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayloadTooLargeError"
+        "429":
+          description: Muitas requisições - O cliente enviou muitas requisições em um curto espaço de tempo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Upload
+  /uploads/{filename}:
+    get:
+      tags:
+        - Uploads
+      summary: Buscar imagem carregada
+      operationId: buscarImagem
+      description: Retorna uma imagem guardada no servidor.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Nome do ficheiro a ser buscado.
+      responses:
+        "200":
+          description: Imagem encontrada com sucesso
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Ficheiro não encontrado
+      security:
+        - bearerAuth: []
+      x-swagger-router-controller: Upload
+  /register:
+    post:
+      tags:
+        - Autenticação
+      summary: Regista um novo utilizador
+      description:
+        "Este endpoint permite que um novo utilizador se registe, fornecendo\
+        \ o nome de utilizador, email e senha. Após o registo bem-sucedido, um token\
+        \ JWT será retornado para autenticação em futuras requisições."
+      operationId: registerNormal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Register"
+        required: true
+      responses:
+        "201":
+          description: Registo bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registar_201"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "409":
+          description:
+            Conflito - Se o nome de utilizador ou o email já estiverem
+            em uso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      x-swagger-router-controller: Autenticao
+  /login:
+    post:
+      tags:
+        - Autenticação
+      summary: Autentica um utilizador
+      description:
+        "Este endpoint permite que um utilizador se autentique, fornecendo\
+        \ o nome de utilizador e a senha. Se as credenciais forem válidas, será retornado\
+        \ um token JWT que pode ser utilizado para autenticação nos próximos endpoints."
+      operationId: loginNormal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Login"
+        required: true
+      responses:
+        "200":
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Login_200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      x-swagger-router-controller: Autenticao
+  /register/google:
+    post:
+      tags:
+        - Autenticação
+      summary: Regista um novo utilizador
+      description:
+        "Este endpoint permite que um novo utilizador se registe, fornecendo\
+        \ o nome de utilizador, email e senha. Após o registo bem-sucedido, um token\
+        \ JWT será retornado para autenticação em futuras requisições."
+      operationId: registerGoogle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Register"
+        required: true
+      responses:
+        "201":
+          description: Registo bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registar_201"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "409":
+          description:
+            Conflito - Se o nome de utilizador ou o email já estiverem
+            em uso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      x-swagger-router-controller: Autenticao
+  /login/google:
+    post:
+      tags:
+        - Autenticação
+      summary: Autenticar utilizador com o Google
+      description:
+        Esta rota autentica o utilizador com o Google usando o ID token
+        fornecido pelo Google Sign-In.
+      operationId: loginGoogle
+      requestBody:
+        description: ID token recebido do Google Sign-In para autenticação do utilizador.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/login_google_body"
+        required: true
+      responses:
+        "200":
+          description: Login bem-sucedido. Retorna os dados do utilizador autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_8"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      x-swagger-router-controller: Autenticao
+  /recuperarpassword:
+    post:
+      tags:
+        - Recuperar Password
+      summary: Inicia a recuperação da senha.
+      operationId: recuperarpasswordPOST
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/recuperarpassword_body"
+      responses:
+        "200":
+          description: E-mail de recuperação enviado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/recuperarpassword_200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      x-swagger-router-controller: RecuperarPassword
+  /novapassword:
+    post:
+      tags:
+        - Recuperar Password
+      summary: Altera a senha do utilizador com o token de recuperação.
+      operationId: novapasswordPOST
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/novapassword_body"
+      responses:
+        "200":
+          description: Senha alterada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/novapassword_200"
+        "400":
+          description: Dados inválidos - Erro no formato ou campos obrigatórios ausentes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Não autorizado - Token de autenticação inválido ou ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "429":
+          description:
+            Muitas requisições - O cliente enviou muitas requisições em
+            um curto espaço de tempo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TooManyRequestsError"
+        "500":
+          description: Erro inesperado - Ocorreu um erro inesperado no servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalServerError"
+      x-swagger-router-controller: RecuperarPassword
+components:
+  schemas:
+    Atleta:
+      required:
+        - anoNascimento
+        - clube_id
+        - escalao_id
+        - id
+        - nacionalidade
+        - nome
+        - posicao
+      type: object
+      properties:
+        id:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome completo do atleta
+          example: Cristiano Ronaldo
+        dataNascimento:
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+          description: Data de nascimento do atleta (formato YYYY-MM-DD)
+          format: date
+        anoNascimento:
+          maximum: 2100
+          minimum: 1900
+          type: integer
+          description: Ano de nascimento do atleta
+          format: int32
+          example: 1985
+        nacionalidade:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nacionalidade do atleta´
+          example: Português
+        posicao:
+          maximum: 4
+          minimum: 1
+          type: integer
+          description: Identificador numérico para a posição do atleta
+          format: int32
+          example: 4
+        links:
+          type: array
+          description: Lista de links relacionados ao atleta
+          items:
+            $ref: "#/components/schemas/Link"
+        nomeAgente:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome do agente
+          example: Jorge Mendes
+        numeroAgente:
+          maxLength: 512
+          pattern: "^\\+351\\s\\d{9}$"
+          type: string
+          description: Contacto do agente
+          example: +351 912345678
+        avaliacaoFinal:
+          maximum: 5
+          minimum: 1
+          type: integer
+          description: Avaliação final do atleta (1-5)
+          format: int32
+          example: 5
+        clube_id:
+          $ref: "#/components/schemas/Clube"
+        escalao_id:
+          $ref: "#/components/schemas/EscalaoAtleta"
+      additionalProperties: false
+    AtletaCriar:
+      required:
+        - anoNascimento
+        - nacionalidade
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome completo do atleta
+          example: Cristiano Ronaldo
+        dataNascimento:
+          type: string
+          format: date
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          description: Data de nascimento do atleta (formato YYYY-MM-DD)
+          nullable: true
+        anoNascimento:
+          maximum: 2100
+          minimum: 1900
+          type: integer
+          description: Ano de nascimento do atleta
+          format: int32
+          example: 1985
+        nacionalidade:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nacionalidade do atleta
+          example: Português
+        posicao:
+          type: integer
+          description: Identificador numérico para a posição do atleta
+          example: 4
+          nullable: true
+        nomeAgente:
+          type: string
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          description: Nome do agente
+          example: Jorge Mendes
+          nullable: true
+        numeroAgente:
+          type: string
+          maxLength: 512
+          pattern: "^\\+351\\s\\d{9}$"
+          description: Contacto do agente
+          example: "+351 912345678"
+          nullable: true
+        links:
+          maxItems: 10
+          pattern:
+            "^(https?|ftp):\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+(\\/[\\w\\-\\.~:@\\\
+            /?#\\[\\]@!\\$&'\\(\\)\\*\\+,;=%]*)?$"
+          type: array
+          description: Lista de id de links relacionados ao atleta
+          items:
+            maxLength: 512
+            type: string
+            example: https://www.zerozero.pt/jogador/gil-graca/528406
+          nullable: true
+        idClube:
+          type: integer
+          description: Identificador único do clube
+          example: 1
+          nullable: true
+        idEscalao:
+          type: integer
+          description: Identificador único do escalão
+          example: 1
+          nullable: true
+      additionalProperties: false
+    AtletaEditar:
+      required:
+        - anoNascimento
+        - nacionalidade
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome completo do atleta
+          example: Cristiano Ronaldo
+        dataNascimento:
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+          type: string
+          description: Data de nascimento do atleta (formato YYYY-MM-DD)
+          format: date
+          nullable: true
+        anoNascimento:
+          maximum: 2100
+          minimum: 1900
+          type: integer
+          description: Ano de nascimento do atleta
+          format: int32
+          example: 1985
+        nacionalidade:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nacionalidade do atleta´
+          example: Português
+        posicao:
+          maximum: 4
+          minimum: 1
+          type: integer
+          description: Identificador numérico para a posição do atleta
+          format: int32
+          example: 4
+          nullable: true
+        nomeAgente:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome do agente
+          example: Jorge Mendes
+          nullable: true
+        numeroAgente:
+          maxLength: 512
+          pattern: "^\\+351\\s\\d{9}$"
+          type: string
+          description: Contacto do agente
+          example: +351 912345678
+          nullable: true
+        links:
+          type: array
+          description: Lista de links relacionados ao atleta
+          maxItems: 10
+          items:
+            type: object
+            properties:
+              link:
+                type: string
+                description: URL relacionada ao atleta
+                maxLength: 512
+                example: https://www.zerozero.pt/jogador/gil-graca/528406
+                nullable: true
+            required:
+              - link
+          pattern:
+            "^(https?|ftp):\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+(\\/[\\w\\-\\.~:@\\/\\?#\\[\\]@!\\$&'\\(\\)\\*\\+,;=%]*)?$"
+        avaliacaoFinal:
+          maximum: 5
+          minimum: 1
+          type: integer
+          description: Avaliação final do atleta (1-5)
+          format: int32
+          nullable: true
+          example: 5
+        idClube:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 1
+          nullable: true
+        idEscalao:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 1
+          nullable: true
+      additionalProperties: false
+    AtletaRelatorio:
+      required:
+        - id
+        - nome
+      type: object
+      properties:
+        id:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome completo do atleta
+          example: Cristiano Ronaldo
+      additionalProperties: false
+    AtletaTarefa:
+      required:
+        - clube_id
+        - id
+        - nome
+      type: object
+      properties:
+        id:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome completo do atleta
+          example: Cristiano Ronaldo
+        clube_id:
+          $ref: "#/components/schemas/Clube"
+      additionalProperties: false
+    AtletaPosicao:
+      required:
+        - id
+        - nome
+      type: object
+      properties:
+        id:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome completo do atleta
+          example: Cristiano Ronaldo
+      additionalProperties: false
+    Link:
+      required:
+        - id
+        - link
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único do link
+          format: int64
+          example: 1
+        link:
+          maxLength: 512
+          type: string
+          description: URL do link associado
+          example: https://example.com
+      additionalProperties: false
+      example:
+        link: https://example.com
+        id: 1
+    Clube:
+      required:
+        - id
+        - nome
+      type: object
+      properties:
+        id:
+          maximum: 999999
+          minimum: 1
+          type: integer
+          description: Identificador único do clube
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          description: Nome do clube
+          example: Rocas do Vouga
+        icon:
+          maxLength: 512
+          pattern:
+            "^(https?|ftp):\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+(\\/[\\w\\-\\.~:@\\\
+            /?#\\[\\]@!\\$&'\\(\\)\\*\\+,;=%]*)?$"
+          type: string
+          description: URL ou caminho para o ícone/imagem do atleta
+          example: https://example.com/images/sporting_logo.png
+      additionalProperties: false
+      example:
+        icon: https://example.com/images/sporting_logo.png
+        nome: Rocas do Vouga
+        id: 1
+    ClubeCriar:
+      required:
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          pattern: "^[a-zA-ZÀ-ÿ'\\- 0-9]+$"
+          type: string
+          description: Nome do clube
+          example: Rocas do Vouga
+        icon:
+          maxLength: 512
+          type: string
+          description: URL ou caminho para o ícone/imagem do atleta
+          example: https://example.com/images/sporting_logo.png
+      additionalProperties: false
+    Tarefa:
+      required:
+        - atleta_id
+        - idClube
+        - data
+        - id
+        - utilizador_id
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único da tarefa
+          format: int64
+          example: 1
+        data:
+          type: string
+          description: Data da tarefa (formato YYYY-MM-DD)
+          format: date
+          example: 2024-12-29
+        horaInicio:
+          type: string
+          description: Hora de início da tarefa (formato YYYY-MM-DDTHH:MM:SS)
+          format: date-time
+          example: 2024-11-20T09:00:00Z
+        horaFim:
+          type: string
+          description: Hora de fim da tarefa (formato YYYY-MM-DDTHH:MM:SS)
+          format: date-time
+          example: 2024-11-20T11:00:00Z
+        jogaCasa:
+          type: boolean
+          description: Indica se a equipa joga em casa (true) ou fora (false)
+          example: true
+        idClube:
+          $ref: "#/components/schemas/Clube"
+        idUtilizador:
+          $ref: "#/components/schemas/UtilizadorTarefa"
+        idAtleta:
+          $ref: "#/components/schemas/AtletaTarefa"
+      additionalProperties: false
+    TarefaCriar:
+      required:
+        - idAtleta
+        - idClube
+        - data
+        - idUtilizador
+      type: object
+      properties:
+        data:
+          type: string
+          description: Data da tarefa (formato YYYY-MM-DD)
+          format: date
+        horaInicio:
+          type: string
+          description: Hora de início da tarefa (formato YYYY-MM-DDTHH:MM:SS)
+          format: date-time
+          example: 2024-11-20T09:00:00Z
+        horaFim:
+          type: string
+          description: Hora de fim da tarefa (formato YYYY-MM-DDTHH:MM:SS)
+          format: date-time
+          example: 2024-11-20T11:00:00Z
+        idClube:
+          type: integer
+          description: Identificador único do clube relacionado com a tarefa
+          format: int64
+          example: 1
+        idUtilizador:
+          type: integer
+          description: Identificador único do utilizador relacionado com a tarefa
+          format: int64
+          example: 2
+        idAtleta:
+          type: integer
+          description: Identificador único do atleta relacionado com a tarefa
+          format: int64
+          example: 3
+        jogaCasa:
+          type: boolean
+          description: Indica se a equipa joga em casa (true) ou fora (false)
+          example: true
+      additionalProperties: false
+    Relatorio:
+      required:
+        - altura
+        - atitudeCompetitiva
+        - idAtleta
+        - data
+        - id
+        - inteligencia
+        - morfologia
+        - tecnica
+        - velocidade
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único do relatório
+          format: int64
+          example: 1
+        tecnica:
+          type: integer
+          description: Nível técnico do atleta
+          format: int32
+          example: 4
+        velocidade:
+          type: integer
+          description: Nível de velocidade do atleta
+          format: int32
+          example: 4
+        atitudeCompetitiva:
+          type: integer
+          description: Nível de atitude competitiva do atleta
+          format: int32
+          example: 4
+        inteligencia:
+          type: integer
+          description: Nível de inteligência do atleta
+          format: int32
+          example: 4
+        altura:
+          type: integer
+          description: Altura do atleta em centímetros
+          format: int32
+          example: 3
+        morfologia:
+          type: integer
+          description: Tipo morfológico do atleta
+          format: int32
+          example: 3
+        data:
+          type: string
+          description: Data do relatório
+          format: date
+        idAtleta:
+          $ref: "#/components/schemas/AtletaRelatorio"
+      additionalProperties: false
+    RelatorioCriar:
+      required:
+        - altura
+        - atitudeCompetitiva
+        - idAtleta
+        - inteligencia
+        - morfologia
+        - tecnica
+        - velocidade
+      type: object
+      properties:
+        tecnica:
+          type: integer
+          description: Nível técnico do atleta
+          format: int32
+          example: 4
+        velocidade:
+          type: integer
+          description: Nível de velocidade do atleta
+          format: int32
+          example: 4
+        atitudeCompetitiva:
+          type: integer
+          description: Nível de atitude competitiva do atleta
+          format: int32
+          example: 4
+        inteligencia:
+          type: integer
+          description: Nível de inteligência do atleta
+          format: int32
+          example: 4
+        altura:
+          type: integer
+          description: Altura do atleta em centímetros
+          format: int32
+          example: 3
+        morfologia:
+          type: integer
+          description: Tipo morfológico do atleta
+          format: int32
+          example: 3
+        idAtleta:
+          type: integer
+          description: Identificador único do atleta
+          format: int64
+          example: 101
+      additionalProperties: false
+    Escalao:
+      required:
+        - id
+        - idadeMax
+        - idadeMin
+        - nome
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único do escalão
+          format: int32
+          example: 1
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do escalão
+          example: Juvenis
+        idadeMax:
+          type: integer
+          description: Idade máxima permitida no escalão
+          format: int32
+          example: 18
+        idadeMin:
+          type: integer
+          description: Idade mínima permitida no escalão
+          format: int32
+          example: 12
+      additionalProperties: false
+    EscalaoCriar:
+      required:
+        - idadeMax
+        - idadeMin
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do escalão
+          example: Juvenis
+        idadeMax:
+          type: integer
+          description: Idade máxima permitida no escalão
+          format: int32
+          example: 18
+        idadeMin:
+          type: integer
+          description: Idade mínima permitida no escalão
+          format: int32
+          example: 12
+      additionalProperties: false
+    EscalaoAtleta:
+      required:
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do escalão
+          example: Juvenis
+      additionalProperties: false
+    Equipa:
+      required:
+        - ePropria
+        - id
+        - nome
+        - posicoes
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único da equipa
+          format: int32
+          example: 1
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome da equipa
+          example: Sub-23
+        ePropria:
+          type: boolean
+          description: Indica se a equipa é própria
+          example: true
+        posicoes:
+          type: array
+          description: Lista de posições associadas à equipa (máximo de 12 posições)
+          items:
+            $ref: "#/components/schemas/Posicao"
+      additionalProperties: false
+    EquipaCriar:
+      required:
+        - ePropria
+        - nome
+        - posicoes
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome da equipa
+          example: Sub-23
+        ePropria:
+          type: boolean
+          description: Indica se a equipa é própria
+          example: true
+        posicoes:
+          type: array
+          description: Lista de posições associadas à equipa (máximo de 22 posições)
+          items:
+            $ref: "#/components/schemas/PosicaoCriar"
+      additionalProperties: false
+    UtilizadorListar:
+      required:
+        - email
+        - id
+        - nome
+        - tipoUtilizador
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único do utilizador
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do utilizador
+          example: João Silva
+        email:
+          maxLength: 512
+          type: string
+          description: Endereço de email do utilizador
+          format: email
+          example: joao.silva@example.com
+        tipoUtilizador:
+          type: integer
+          description: Tipo de utilizador
+          format: int32
+          example: 1
+      additionalProperties: false
+    UtilizadorCriar:
+      required:
+        - email
+        - nome
+        - tipoUtilizador
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do utilizador
+          example: João Silva
+        email:
+          maxLength: 512
+          type: string
+          description: Endereço de email do utilizador
+          format: email
+          example: joao.silva@example.com
+        tipoUtilizador:
+          type: integer
+          description: Tipo de utilizador
+          format: int32
+          example: 1
+      additionalProperties: false
+    UtilizadorEditarLogado:
+      required:
+        - email
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do utilizador
+          example: João Silva
+        email:
+          maxLength: 512
+          type: string
+          description: Endereço de email do utilizador
+          format: email
+          example: joao.silva@example.com
+      additionalProperties: false
+    UtilizadorTarefa:
+      required:
+        - nome
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador único do utilizador
+          format: int64
+          example: 1
+        nome:
+          maxLength: 512
+          type: string
+          description: Nome do utilizador
+          example: João Silva
+      additionalProperties: false
+    Posicao:
+      required:
+        - atleta_id
+        - equipa_id
+        - id
+        - numero
+      type: object
+      properties:
+        numero:
+          maximum: 22
+          minimum: 1
+          type: integer
+          description: Número associado à posição
+          format: int32
+          example: 10
+        atleta_id:
+          $ref: "#/components/schemas/AtletaPosicao"
+      additionalProperties: false
+    PosicaoCriar:
+      required:
+        - idAtleta
+        - numero
+      type: object
+      properties:
+        numero:
+          maximum: 22
+          minimum: 1
+          type: integer
+          description: Número associado à posição
+          format: int32
+          example: 10
+        idAtleta:
+          maximum: 22
+          minimum: 1
+          type: integer
+          description: Número associado à posição
+          format: int32
+          example: 10
+          nullable: true
+      additionalProperties: false
+    Register:
+      required:
+        - email
+        - password
+        - nome
+      type: object
+      properties:
+        nome:
+          maxLength: 20
+          minLength: 3
+          pattern: "^[a-zA-ZÀ-ÿ0-9_ ]{3,20}$"
+          type: string
+          description: Nome de utilizador
+          example: gilgraca
+        email:
+          maxLength: 100
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+          type: string
+          description: Endereço de email do utilizador
+          format: email
+          example: gilgraca@example.com
+        password:
+          maxLength: 50
+          minLength: 8
+          pattern: "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$"
+          type: string
+          description: Senha para o novo utilizador
+          example: senha-segura123
+      additionalProperties: false
+    Login:
+      required:
+        - password
+      type: object
+      properties:
+        nome:
+          maxLength: 15
+          minLength: 3
+          pattern: "^[a-zA-ZÀ-ÿ0-9_ ]{3,20}$"
+          type: string
+          description: Nome de utilizador para autenticação
+          example: gilgraca
+        password:
+          maxLength: 50
+          minLength: 8
+          pattern: "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$"
+          type: string
+          description: Palavra-passe do utilizador
+          example: P3ssw3rd
+      additionalProperties: false
+    UnexpectedError:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9À-ÿ ]+$"
+          type: string
+          example: Ocorreu um erro inesperado no servidor.
+      additionalProperties: false
+    BadRequestError:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          example: Token de autenticação inválido ou ausente.
+      additionalProperties: false
+    UnauthorizedError:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          example: Campos obrigatórios ausentes ou formato inválido.
+      additionalProperties: false
+    ForbiddenError:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          example: Acesso proibido - O utilizador não tem permissões suficientes.
+      additionalProperties: false
+    NotFoundErrorAtleta:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhum atleta encontrado.
+      additionalProperties: false
+    NotFoundErrorClube:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhum clube encontrado.
+      additionalProperties: false
+    NotFoundErrorTarefa:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhuma tarefa encontrada.
+      additionalProperties: false
+    NotFoundErrorRelatorio:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhum relatório encontrado.
+      additionalProperties: false
+    NotFoundErrorEscalao:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhum escalão encontrado.
+      additionalProperties: false
+    NotFoundErrorEquipas:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhuma equipa encontrada.
+      additionalProperties: false
+    NotFoundErrorUtilizador:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          description: Mensagem explicativa do erro
+          example: Nenhum utilizador encontrado.
+      additionalProperties: false
+    NotAcceptableError:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          example: Formato não aceitável. O formato solicitado não é suportado.
+      additionalProperties: false
+    ConflictError:
+      required:
+        - conflictDetails
+        - error
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: '^[a-zA-Z0-9 .,:;!?()''"-]+$'
+          type: string
+          example: Nome de utilizador ou email já estão em uso.
+        conflictDetails:
+          $ref: "#/components/schemas/ConflictError_conflictDetails"
+      additionalProperties: false
+    PayloadTooLargeError:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Código do erro.
+          example: "413"
+        message:
+          type: string
+          description: Descrição do erro.
+          example: "O arquivo enviado excede o tamanho máximo permitido."
+        maxSize:
+          type: integer
+          description: O tamanho máximo permitido para o arquivo em bytes.
+          example: 10485760
+    TooManyRequestsError:
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 ]+$"
+          type: string
+          example:
+            Muitas requisições. O cliente enviou muitas requisições em um curto
+            espaço de tempo.
+      additionalProperties: false
+    InternalServerError:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          maxLength: 255
+          pattern: '^[a-zA-Z0-9 .,:;!?()''"-]+$'
+          type: string
+          example: Ocorreu um erro interno no servidor durante o registo.
+        details:
+          maxLength: 500
+          pattern: '^[a-zA-Z0-9 .,:;!?()''"-]+$'
+          type: string
+          example: Falha ao conectar com o banco de dados.
+        timestamp:
+          maxLength: 30
+          pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          type: string
+          format: date-time
+          example: 2024-11-11T14:30:00Z
+      additionalProperties: false
+    ListarAtleta200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de atletas que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Atleta"
+      additionalProperties: false
+    ListarUmAtleta200:
+      type: object
+      properties:
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Atleta"
+      additionalProperties: false
+    ListarClubes200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de clubes que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Clube"
+      additionalProperties: false
+    ListarTarefa200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de tarefas que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Tarefa"
+      additionalProperties: false
+    ListarUmaTarefa200:
+      type: object
+      properties:
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Tarefa"
+      additionalProperties: false
+    ListarRelatorios200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de relatórios que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Relatorio"
+      additionalProperties: false
+    ListarNumeroRelatorios200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de relatórios que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Relatorio"
+      additionalProperties: false
+    ListarEscalao200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de escalões que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Escalao"
+      additionalProperties: false
+    ListarEquipa200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de escalões que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Equipa"
+      additionalProperties: false
+    ListarUmaEquipa200:
+      type: object
+      properties:
+        data:
+          maxItems: 50
+          type: array
+          items:
+            $ref: "#/components/schemas/Equipa"
+      additionalProperties: false
+    ListarUtilizador200:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Número total de tarefas que correspondem aos filtros aplicados.
+        totalPages:
+          type: integer
+          description: "Número total de páginas, baseado no 'limit' fornecido."
+        currentPage:
+          type: integer
+          description: Página atual (calculada com o offset e limit).
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UtilizadorListar"
+      additionalProperties: false
+    ListarUmUtilizador200:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UtilizadorListar"
+      additionalProperties: false
+    Registar_201:
+      type: object
+      properties:
+        username:
+          maxLength: 20
+          minLength: 3
+          pattern: "^[a-zA-Z0-9_]{3,20}$"
+          type: string
+          description: Nome de utilizador do novo utilizador
+          example: gilgraca
+        email:
+          maxLength: 100
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+          type: string
+          description: Email do novo utilizador
+          format: email
+          example: gilgraca@example.com
+        tipoUtilizador:
+          type: integer
+          description: Tipo de utilizador
+          format: int32
+          example: 1
+      additionalProperties: false
+    Login_200:
+      type: object
+      properties:
+        nome:
+          maxLength: 15
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+          description: Nome de utilizador
+          example: gilgraca
+        tipoUtilizador:
+          type: integer
+          description: Tipo de utilizador
+          format: int32
+          example: 1
+        token:
+          maxLength: 300
+          pattern: "^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$"
+          type: string
+          description: Token JWT para autenticação
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+      additionalProperties: false
+    login_google_body:
+      type: object
+      properties:
+        token:
+          maxLength: 500
+          pattern: "^[A-Za-z0-9\\-_]+\\.[A-Za-z0-9\\-_]+\\.[A-Za-z0-9\\-_]+$"
+          type: string
+          example: ya29.a0AfH6SMB8DqndGh3UV7kb7bksLkj3MjY2lkwbdf1ew33X
+      additionalProperties: false
+    inline_response_200_8:
+      type: object
+      properties:
+        userId:
+          maxLength: 20
+          pattern: "^[0-9]+$"
+          type: string
+          example: "12345"
+        name:
+          maxLength: 100
+          pattern: "^[a-zA-ZÀ-ÿ'\\- ]+$"
+          type: string
+          example: João Silva
+        email:
+          maxLength: 100
+          pattern: "^[\\w\\.-]+@[\\w\\.-]+\\.\\w{2,}$"
+          type: string
+          example: joao.silva@gmail.com
+      additionalProperties: false
+      example:
+        name: João Silva
+        userId: "12345"
+        email: joao.silva@gmail.com
+    recuperarpassword_body:
+      type: object
+      properties:
+        email:
+          maxLength: 100
+          pattern: "^[\\w\\.-]+@[\\w\\.-]+\\.\\w{2,}$"
+          type: string
+          format: email
+          example: user@example.com
+      additionalProperties: false
+    recuperarpassword_200:
+      type: object
+      properties:
+        message:
+          maxLength: 100
+          pattern: "^[\\w\\.-]+@[\\w\\.-]+\\.\\w{2,}$"
+          type: string
+          example: E-mail de recuperação enviado com sucesso.
+      additionalProperties: false
+      example:
+        message: E-mail de recuperação enviado com sucesso.
+    novapassword_body:
+      type: object
+      properties:
+        token:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9\\-_]+$"
+          type: string
+          example: recuperacao_token_gerado
+        novaPassword:
+          maxLength: 128
+          minLength: 8
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]+$"
+          type: string
+          example: novaSenha123
+      additionalProperties: false
+    novapassword_200:
+      type: object
+      properties:
+        message:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 .,:;!?()-]+$"
+          type: string
+          example: Senha alterada com sucesso.
+      additionalProperties: false
+      example:
+        message: Senha alterada com sucesso.
+    upload_200:
+      type: object
+      properties:
+        message:
+          maxLength: 255
+          pattern: "^[A-Za-z0-9 .,:;!?()-]+$"
+          type: string
+          example: Upload criado com sucesso.
+      additionalProperties: false
+    ConflictError_conflictDetails:
+      type: object
+      properties:
+        username:
+          maxLength: 15
+          pattern: "^[a-zA-Z0-9_]{3,15}$"
+          type: string
+          example: john_doe
+        email:
+          maxLength: 100
+          pattern: "^[\\w\\.-]+@[\\w\\.-]+\\.\\w{2,}$"
+          type: string
+          example: john.doe@example.com
+      additionalProperties: false
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
